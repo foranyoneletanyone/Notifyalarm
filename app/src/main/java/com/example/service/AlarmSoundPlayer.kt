@@ -21,10 +21,21 @@ class AlarmSoundPlayer(private val context: Context) {
     @Volatile private var playbackJob: Job? = null
     private val coroutineScope = CoroutineScope(Dispatchers.Default)
 
+    private fun ensureMaxVolume() {
+        try {
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
+            audioManager.setStreamVolume(AudioManager.STREAM_ALARM, maxVolume, 0)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     fun play(soundType: String) {
         synchronized(this) {
             stop()
             isPlaying = true
+            ensureMaxVolume()
 
             if (soundType == "System Default") {
                 try {
@@ -119,6 +130,7 @@ class AlarmSoundPlayer(private val context: Context) {
                     @Suppress("DEPRECATION")
                     setAudioStreamType(AudioManager.STREAM_ALARM)
                     isLooping = true
+                    setVolume(1.0f, 1.0f)
                 }
 
                 if (cacheFile.exists() && cacheFile.length() > 1000) {
@@ -191,6 +203,7 @@ class AlarmSoundPlayer(private val context: Context) {
                     @Suppress("DEPRECATION")
                     setAudioStreamType(AudioManager.STREAM_ALARM)
                     isLooping = true
+                    setVolume(1.0f, 1.0f)
                     setDataSource(userFile.absolutePath)
                     prepare()
                 }
@@ -245,6 +258,17 @@ class AlarmSoundPlayer(private val context: Context) {
                     bufferSize,
                     AudioTrack.MODE_STREAM
                 )
+            }
+
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    track.setVolume(1.0f)
+                } else {
+                    @Suppress("DEPRECATION")
+                    track.setStereoVolume(1.0f, 1.0f)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
 
             synchronized(this@AlarmSoundPlayer) {
@@ -315,26 +339,26 @@ class AlarmSoundPlayer(private val context: Context) {
     private fun getAmplitude(soundType: String, sampleCount: Long, sampleRate: Int): Double {
         val seconds = sampleCount.toDouble() / sampleRate
         return when (soundType) {
-            "Classic Sirens" -> 0.8
+            "Classic Sirens" -> 1.0
             "Retro Beeps" -> {
                 // Beep for 0.15s, silent for 0.15s
                 val cycle = seconds % 0.3
-                if (cycle < 0.15) 0.8 else 0.0
+                if (cycle < 0.15) 1.0 else 0.0
             }
             "Zen Waves" -> {
-                // Breathing amplitude mod
-                0.5 + 0.3 * sin(2.0 * Math.PI * seconds * 1.5)
+                // Breathing amplitude mod (up to 1.0 max)
+                0.6 + 0.4 * sin(2.0 * Math.PI * seconds * 1.5)
             }
             "Digital Alert" -> {
                 // Staccato bursts: 3 fast beeps of 80ms, then 600ms pause
                 val cycle = seconds % 0.9
                 if (cycle < 0.08 || (cycle in 0.12..0.20) || (cycle in 0.24..0.32)) {
-                    0.8
+                    1.0
                 } else {
                     0.0
                 }
             }
-            else -> 0.7
+            else -> 1.0
         }
     }
 }
