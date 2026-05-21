@@ -1,0 +1,6 @@
+{
+  "name": "Notification Alarm",
+  "description": "A Bento Grid styled notification alarm tracker. Filter notification messages with sophisticated AND/OR keyword matching and trigger alarms with custom sound pitches and snooze support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
